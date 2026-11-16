@@ -1,0 +1,6 @@
+{
+  "name": "SMA Negeri 1 Bantarsari",
+  "description": "Website resmi SMA Negeri 1 Bantarsari (SMANSABA) Kab. Cilacap, Jawa Tengah - Informasi akademik, fasilitas, ekstrakurikuler, dan layanan digital sekolah.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

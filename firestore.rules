@@ -1,0 +1,251 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core helper primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isBootstrapSuperAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'eventt479@gmail.com' ||
+        request.auth.token.email == 'osisexample@gmail.com'
+      );
+    }
+    function adminDoc() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function hasAdminDoc() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isActiveAdmin() {
+      return isBootstrapSuperAdmin() || (hasAdminDoc() && adminDoc().data.isActive == true);
+    }
+    function isSuperAdmin() {
+      return isBootstrapSuperAdmin() || (isActiveAdmin() && adminDoc().data.role == 'SUPER_ADMIN');
+    }
+    function isGeneralAdmin() {
+      return isSuperAdmin() || (isActiveAdmin() && adminDoc().data.role == 'ADMIN');
+    }
+    function hasPermission(perm) {
+      return isSuperAdmin() || (isActiveAdmin() && adminDoc().data.role == 'ADMIN' && (perm in adminDoc().data.permissions));
+    }
+    function isDivisionAdminFor(divId) {
+      return isActiveAdmin() && adminDoc().data.role == 'DIVISION_ADMIN' && adminDoc().data.assignedDivisionId == divId;
+    }
+    function strLen(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    // Validation helpers
+    function isValidMusicRequestCreate(data) {
+      return data.keys().hasAll(['songTitle', 'artist', 'status', 'isPublicDisplay', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['songTitle', 'artist', 'dedication', 'senderName', 'status', 'adminNotes', 'isPublicDisplay', 'linkedTrackId', 'createdAt', 'updatedAt'])
+        && strLen(data.songTitle, 1, 120)
+        && strLen(data.artist, 1, 100)
+        && (!('dedication' in data) || (data.dedication is string && data.dedication.size() <= 280))
+        && (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 80))
+        && data.status == 'PENDING'
+        && data.isPublicDisplay == false
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidMusicRequestAdminUpdate(data) {
+      return data.keys().hasAll(['songTitle', 'artist', 'status', 'isPublicDisplay', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['songTitle', 'artist', 'dedication', 'senderName', 'status', 'adminNotes', 'isPublicDisplay', 'linkedTrackId', 'createdAt', 'updatedAt'])
+        && strLen(data.songTitle, 1, 120)
+        && strLen(data.artist, 1, 100)
+        && data.status in ['PENDING', 'APPROVED', 'REJECTED', 'QUEUED', 'NOW_PLAYING', 'COMPLETED']
+        && data.isPublicDisplay is bool;
+    }
+
+    function isValidAttendanceCreate(data) {
+      return data.keys().hasAll(['memberId', 'memberAuthUid', 'memberNumber', 'memberName', 'divisionId', 'divisionName', 'dutyDate', 'dutySchedule', 'status', 'serverTimestamp'])
+        && data.keys().hasOnly(['memberId', 'memberAuthUid', 'memberNumber', 'memberName', 'divisionId', 'divisionName', 'dutyDate', 'dutySchedule', 'status', 'drivePhotoFileId', 'driveFileName', 'driveUploadStatus', 'sheetsSyncStatus', 'notes', 'serverTimestamp', 'createdAt'])
+        && isValidId(data.memberId)
+        && strLen(data.memberAuthUid, 1, 128)
+        && strLen(data.memberNumber, 1, 40)
+        && strLen(data.memberName, 1, 120)
+        && strLen(data.divisionId, 1, 128)
+        && strLen(data.divisionName, 1, 120)
+        && strLen(data.dutyDate, 8, 20)
+        && strLen(data.dutySchedule, 1, 40)
+        && data.status in ['HADIR', 'TERLAMBAT', 'IZIN', 'ALPHA']
+        && data.serverTimestamp == request.time;
+    }
+
+    // 1. Website Settings
+    match /websiteSettings/{settingId} {
+      allow get: if (settingId in ['main', 'musicConfig']) || isActiveAdmin();
+      allow list: if isActiveAdmin();
+      allow create, update: if isValidId(settingId) && (isSuperAdmin() || (settingId == 'musicConfig' && hasPermission('manageMusic')) || (settingId == 'main' && hasPermission('manageContent')));
+      allow delete: if isSuperAdmin();
+    }
+
+    // 2. Admins (RBAC Registry) & Google Admin Invites
+    match /admins/{uid} {
+      allow get: if isActiveAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow list: if isSuperAdmin() || isGeneralAdmin();
+      allow create: if isValidId(uid) && (
+        isSuperAdmin() ||
+        (
+          isEmailVerified()
+          && request.auth.uid == uid
+          && incoming().uid == request.auth.uid
+          && incoming().email == request.auth.token.email
+          && incoming().isActive == true
+          && incoming().inviteId is string
+          && isValidId(incoming().inviteId)
+          && exists(/databases/$(database)/documents/adminInvites/$(incoming().inviteId))
+          && get(/databases/$(database)/documents/adminInvites/$(incoming().inviteId)).data.isActive == true
+          && get(/databases/$(database)/documents/adminInvites/$(incoming().inviteId)).data.email == request.auth.token.email
+          && incoming().role == get(/databases/$(database)/documents/adminInvites/$(incoming().inviteId)).data.role
+          && incoming().permissions == get(/databases/$(database)/documents/adminInvites/$(incoming().inviteId)).data.permissions
+        )
+      );
+      allow update, delete: if isValidId(uid) && isSuperAdmin();
+    }
+
+    match /adminInvites/{inviteKey} {
+      allow get, list: if isSuperAdmin() || (isEmailVerified() && existing().email == request.auth.token.email && existing().isActive == true);
+      allow create, update, delete: if isValidId(inviteKey) && isSuperAdmin();
+    }
+
+    // 3. Divisions & Positions
+    match /divisions/{divisionId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(divisionId) && (isSuperAdmin() || isGeneralAdmin());
+    }
+
+    match /positions/{positionId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(positionId) && (isSuperAdmin() || isGeneralAdmin());
+    }
+
+    // 4. Members (Private PII) & PublicMembers (Public Organizational Structure)
+    match /members/{memberId} {
+      allow get: if isActiveAdmin() || (isSignedIn() && existing().authUid == request.auth.uid);
+      allow list: if isActiveAdmin() || (isSignedIn() && existing().authUid == request.auth.uid);
+      allow create, update, delete: if isValidId(memberId) && (isSuperAdmin() || hasPermission('manageMembers'));
+    }
+
+    match /publicMembers/{memberId} {
+      allow get: if existing().isPublished == true || isActiveAdmin();
+      allow list: if existing().isPublished == true || isActiveAdmin();
+      allow create, update, delete: if isValidId(memberId) && (isSuperAdmin() || hasPermission('manageMembers'));
+    }
+
+    match /memberAuthMap/{memberNumber} {
+      allow get: if isActiveAdmin() || (isSignedIn() && existing().authUid == request.auth.uid);
+      allow list: if isActiveAdmin();
+      allow create, update, delete: if isValidId(memberNumber) && (isSuperAdmin() || hasPermission('manageMembers'));
+    }
+
+    // 5. Announcements
+    match /announcements/{announcementId} {
+      allow get, list: if existing().published == true || isActiveAdmin();
+      allow create, update, delete: if isValidId(announcementId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageAnnouncements'));
+    }
+
+    // 6. Program Kerja
+    match /programs/{programId} {
+      allow read: if true;
+      allow create: if isValidId(programId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('managePrograms') || isDivisionAdminFor(incoming().divisionId));
+      allow update: if isValidId(programId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('managePrograms') || (isDivisionAdminFor(existing().divisionId) && incoming().divisionId == existing().divisionId));
+      allow delete: if isValidId(programId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('managePrograms'));
+    }
+
+    // 7. Attendance & Duty Schedules (Strictly Private Evidence & Records)
+    match /attendance/{attendanceId} {
+      allow get, list: if isSuperAdmin() || hasPermission('manageAttendance') || (isSignedIn() && existing().memberAuthUid == request.auth.uid);
+      allow create: if isValidId(attendanceId)
+        && isSignedIn()
+        && isValidAttendanceCreate(incoming())
+        && incoming().memberAuthUid == request.auth.uid
+        && exists(/databases/$(database)/documents/members/$(incoming().memberId))
+        && get(/databases/$(database)/documents/members/$(incoming().memberId)).data.isActive == true
+        && get(/databases/$(database)/documents/members/$(incoming().memberId)).data.authUid == request.auth.uid;
+      allow update, delete: if isValidId(attendanceId) && (isSuperAdmin() || hasPermission('manageAttendance'));
+    }
+
+    match /dutySchedules/{scheduleId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(scheduleId) && (isSuperAdmin() || hasPermission('manageAttendance'));
+    }
+
+    // 8. Calendar Events
+    match /calendarEvents/{eventId} {
+      allow get, list: if existing().published == true || isActiveAdmin();
+      allow create: if isValidId(eventId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageContent') || isDivisionAdminFor(incoming().divisionId));
+      allow update, delete: if isValidId(eventId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageContent') || isDivisionAdminFor(existing().divisionId));
+    }
+
+    // 9. Gallery Albums & Items
+    match /galleryAlbums/{albumId} {
+      allow get, list: if existing().isPublished == true || isActiveAdmin();
+      allow create, update, delete: if isValidId(albumId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageGallery') || (isActiveAdmin() && adminDoc().data.role == 'DIVISION_ADMIN'));
+    }
+
+    match /galleryItems/{itemId} {
+      allow get, list: if existing().isPublished == true || isActiveAdmin();
+      allow create, update, delete: if isValidId(itemId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageGallery') || (isActiveAdmin() && adminDoc().data.role == 'DIVISION_ADMIN'));
+    }
+
+    // 10. Our Journey Timeline
+    match /journeyTimeline/{timelineId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(timelineId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageContent'));
+    }
+
+    // 11. Document Archive (Strict Public vs Private isolation)
+    match /documents/{documentId} {
+      allow get, list: if existing().visibility == 'public' || isActiveAdmin();
+      allow create, update, delete: if isValidId(documentId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageDocuments'));
+    }
+
+    // 12. Music Tracks & Public Music Requests
+    match /musicTracks/{trackId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(trackId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageMusic'));
+    }
+
+    match /musicRequests/{requestId} {
+      allow get, list: if isActiveAdmin()
+        || (existing().status in ['QUEUED', 'NOW_PLAYING', 'COMPLETED'])
+        || (existing().status == 'APPROVED' && existing().isPublicDisplay == true);
+      allow create: if isValidId(requestId) && isValidMusicRequestCreate(incoming());
+      allow update: if isValidId(requestId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageMusic')) && isValidMusicRequestAdminUpdate(incoming());
+      allow delete: if isValidId(requestId) && (isSuperAdmin() || isGeneralAdmin() || hasPermission('manageMusic'));
+    }
+
+    // 13. Audit Logs & Integration Jobs (Immutable Audit Trail)
+    match /auditLogs/{logId} {
+      allow get, list: if isActiveAdmin();
+      allow create: if isValidId(logId) && isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /integrationJobs/{jobId} {
+      allow get, list: if isActiveAdmin();
+      allow create: if isValidId(jobId) && isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}

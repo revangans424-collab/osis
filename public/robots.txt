@@ -1,0 +1,6 @@
+# robots.txt for SMA Negeri 1 Bantarsari (SMANSABA)
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: /sitemap.xml

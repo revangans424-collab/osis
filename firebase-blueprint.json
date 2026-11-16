@@ -1,0 +1,387 @@
+{
+  "entities": {
+    "WebsiteSettings": {
+      "title": "Website Settings",
+      "description": "Organization branding, theme defaults, vision, mission, history, goals, and music request operating config",
+      "type": "object",
+      "properties": {
+        "organizationName": { "type": "string", "maxLength": 100 },
+        "organizationType": { "type": "string", "maxLength": 50 },
+        "period": { "type": "string", "maxLength": 30 },
+        "tagline": { "type": "string", "maxLength": 200 },
+        "introduction": { "type": "string", "maxLength": 2000 },
+        "vision": { "type": "string", "maxLength": 1000 },
+        "mission": { "type": "string", "maxLength": 2500 },
+        "history": { "type": "string", "maxLength": 3000 },
+        "goals": { "type": "string", "maxLength": 2000 },
+        "logoUrl": { "type": "string", "maxLength": 2000 },
+        "heroImageUrl": { "type": "string", "maxLength": 2000 },
+        "defaultTheme": { "type": "string", "enum": ["light", "dark"] },
+        "musicEnabled": { "type": "boolean" }
+      }
+    },
+    "AdminUser": {
+      "title": "Admin Account",
+      "description": "Authorized Super Admin, Admin, or Division Admin record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN", "DIVISION_ADMIN"] },
+        "assignedDivisionId": { "type": "string", "maxLength": 128 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["uid", "email", "displayName", "role", "isActive"]
+    },
+    "AdminInvite": {
+      "title": "Google Admin Allowlist Invite",
+      "description": "Pre-approved Google email invite for admin accounts signing in with Google",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 150 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN", "DIVISION_ADMIN"] },
+        "assignedDivisionId": { "type": "string", "maxLength": 128 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["email", "displayName", "role", "isActive"]
+    },
+    "Division": {
+      "title": "Division",
+      "description": "Organizational division (Sekbid / BPH)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "code": { "type": "string", "maxLength": 30 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "code"]
+    },
+    "Position": {
+      "title": "Position",
+      "description": "Organizational position title and hierarchy order",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "order"]
+    },
+    "Member": {
+      "title": "Private Member Record",
+      "description": "Full organization member profile and authentication linkage (private)",
+      "type": "object",
+      "properties": {
+        "memberNumber": { "type": "string", "maxLength": 40 },
+        "fullName": { "type": "string", "maxLength": 120 },
+        "divisionId": { "type": "string", "maxLength": 128 },
+        "positionId": { "type": "string", "maxLength": 128 },
+        "positionTitle": { "type": "string", "maxLength": 120 },
+        "classGrade": { "type": "string", "maxLength": 40 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "photoUrl": { "type": "string", "maxLength": 2000 },
+        "dutyScheduleId": { "type": "string", "maxLength": 128 },
+        "dutyDays": { "type": "array", "description": "Assigned gate duty days of week (e.g. Senin, Rabu)" },
+        "authUid": { "type": "string", "maxLength": 128 },
+        "isActive": { "type": "boolean" },
+        "isPublished": { "type": "boolean" }
+      },
+      "required": ["memberNumber", "fullName", "divisionId", "isActive", "isPublished"]
+    },
+    "PublicMember": {
+      "title": "Public Structure Member",
+      "description": "Publicly visible organizational structure card without PII",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "maxLength": 120 },
+        "divisionId": { "type": "string", "maxLength": 128 },
+        "divisionName": { "type": "string", "maxLength": 120 },
+        "positionTitle": { "type": "string", "maxLength": 120 },
+        "hierarchyRank": { "type": "number" },
+        "bio": { "type": "string", "maxLength": 500 },
+        "photoUrl": { "type": "string", "maxLength": 2000 },
+        "isPublished": { "type": "boolean" }
+      },
+      "required": ["fullName", "divisionId", "positionTitle", "isPublished"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Organizational announcements and notices",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "category": { "type": "string", "enum": ["General", "Important", "Meeting", "Activities", "Division Information"] },
+        "author": { "type": "string", "maxLength": 120 },
+        "publishedAt": { "type": "string", "maxLength": 40 },
+        "imageUrl": { "type": "string", "maxLength": 2000 },
+        "isPinned": { "type": "boolean" },
+        "published": { "type": "boolean" }
+      },
+      "required": ["title", "description", "category", "author", "published"]
+    },
+    "ProgramWork": {
+      "title": "Program Kerja",
+      "description": "Organizational work program and execution tracking",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "divisionId": { "type": "string", "maxLength": 128 },
+        "divisionName": { "type": "string", "maxLength": 120 },
+        "personInCharge": { "type": "string", "maxLength": 120 },
+        "targetDate": { "type": "string", "maxLength": 40 },
+        "status": { "type": "string", "enum": ["BELUM DIMULAI", "SEDANG BERJALAN", "SELESAI"] },
+        "progressNotes": { "type": "string", "maxLength": 2000 },
+        "documentationUrl": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["name", "divisionId", "personInCharge", "targetDate", "status"]
+    },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Private member gate-duty attendance record with server timestamp and Drive photo file ID",
+      "type": "object",
+      "properties": {
+        "memberId": { "type": "string", "maxLength": 128 },
+        "memberAuthUid": { "type": "string", "maxLength": 128 },
+        "memberNumber": { "type": "string", "maxLength": 40 },
+        "memberName": { "type": "string", "maxLength": 120 },
+        "divisionId": { "type": "string", "maxLength": 128 },
+        "divisionName": { "type": "string", "maxLength": 120 },
+        "dutyDate": { "type": "string", "maxLength": 20 },
+        "dutySchedule": { "type": "string", "maxLength": 40 },
+        "status": { "type": "string", "enum": ["HADIR", "TERLAMBAT", "IZIN", "ALPHA"] },
+        "drivePhotoFileId": { "type": "string", "maxLength": 256 }
+      },
+      "required": ["memberId", "memberAuthUid", "memberNumber", "dutyDate", "status"]
+    },
+    "DutySchedule": {
+      "title": "Duty Schedule",
+      "description": "Configurable gate-duty schedule and attendance time windows",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "dutyTimeWib": { "type": "string", "maxLength": 10 },
+        "windowOpenWib": { "type": "string", "maxLength": 10 },
+        "windowCloseWib": { "type": "string", "maxLength": 10 },
+        "graceMinutes": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "dutyTimeWib", "windowOpenWib", "windowCloseWib", "isActive"]
+    },
+    "CalendarEvent": {
+      "title": "Calendar Event",
+      "description": "Scheduled meeting, activity, or organizational deadline",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "date": { "type": "string", "maxLength": 20 },
+        "time": { "type": "string", "maxLength": 40 },
+        "location": { "type": "string", "maxLength": 200 },
+        "organizer": { "type": "string", "maxLength": 120 },
+        "category": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "published": { "type": "boolean" }
+      },
+      "required": ["title", "date", "category", "published"]
+    },
+    "GalleryAlbum": {
+      "title": "Gallery Album",
+      "description": "Activity documentation album",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 160 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "publishedAt": { "type": "string", "maxLength": 30 },
+        "coverUrl": { "type": "string", "maxLength": 2000 },
+        "isPublished": { "type": "boolean" }
+      },
+      "required": ["title", "isPublished"]
+    },
+    "GalleryItem": {
+      "title": "Gallery Item",
+      "description": "Photo or video belonging to a gallery album",
+      "type": "object",
+      "properties": {
+        "albumId": { "type": "string", "maxLength": 128 },
+        "mediaType": { "type": "string", "enum": ["photo", "video"] },
+        "url": { "type": "string", "maxLength": 2000 },
+        "driveFileId": { "type": "string", "maxLength": 256 },
+        "caption": { "type": "string", "maxLength": 300 },
+        "isPublished": { "type": "boolean" }
+      },
+      "required": ["albumId", "mediaType", "url", "isPublished"]
+    },
+    "JourneyItem": {
+      "title": "Journey Timeline Item",
+      "description": "Chronological milestone of PADMAWIJAYA 2026/2027",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 160 },
+        "phase": { "type": "string", "maxLength": 80 },
+        "date": { "type": "string", "maxLength": 30 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 2000 },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "phase", "date", "description"]
+    },
+    "ArchiveDocument": {
+      "title": "Document Archive Item",
+      "description": "Proposal, activity report, LPJ, or organizational document",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "enum": ["Proposal", "Laporan Kegiatan", "LPJ", "Dokumen Organisasi", "Dokumen Publik"] },
+        "description": { "type": "string", "maxLength": 1000 },
+        "visibility": { "type": "string", "enum": ["public", "private"] },
+        "fileUrl": { "type": "string", "maxLength": 2000 },
+        "driveFileId": { "type": "string", "maxLength": 256 },
+        "uploadedAt": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["title", "category", "visibility"]
+    },
+    "MusicTrack": {
+      "title": "Music Track",
+      "description": "Authorized background audio track managed by admins",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 160 },
+        "artist": { "type": "string", "maxLength": 120 },
+        "audioUrl": { "type": "string", "maxLength": 2000 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["title", "artist", "audioUrl", "isActive"]
+    },
+    "MusicRequest": {
+      "title": "Music Request",
+      "description": "Publicly submitted song request moderated by admins",
+      "type": "object",
+      "properties": {
+        "songTitle": { "type": "string", "maxLength": 120 },
+        "artist": { "type": "string", "maxLength": 100 },
+        "dedication": { "type": "string", "maxLength": 280 },
+        "senderName": { "type": "string", "maxLength": 80 },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED", "QUEUED", "NOW_PLAYING", "COMPLETED"] },
+        "adminNotes": { "type": "string", "maxLength": 300 },
+        "isPublicDisplay": { "type": "boolean" },
+        "linkedTrackId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["songTitle", "artist", "status", "isPublicDisplay"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Immutable audit trail for privileged actions and attendance corrections",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 120 },
+        "actorUid": { "type": "string", "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 150 },
+        "targetCollection": { "type": "string", "maxLength": 80 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["action", "actorUid", "targetCollection"]
+    },
+    "IntegrationJob": {
+      "title": "Integration Job Log",
+      "description": "Google Drive and Google Sheets synchronization status log",
+      "type": "object",
+      "properties": {
+        "service": { "type": "string", "enum": ["GOOGLE_DRIVE", "GOOGLE_SHEETS"] },
+        "operation": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["SUCCESS", "FAILED", "SETUP_REQUIRED"] },
+        "message": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["service", "operation", "status"]
+    }
+  },
+  "firestore": {
+    "/websiteSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/WebsiteSettings" },
+      "description": "Organization configuration, theme defaults, music config, and integration settings"
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin accounts and RBAC permissions"
+    },
+    "/adminInvites/{inviteKey}": {
+      "schema": { "$ref": "#/entities/AdminInvite" },
+      "description": "Google email allowlist allowing multiple admins to sign in via Google"
+    },
+    "/divisions/{divisionId}": {
+      "schema": { "$ref": "#/entities/Division" },
+      "description": "OSIS divisions and BPH"
+    },
+    "/positions/{positionId}": {
+      "schema": { "$ref": "#/entities/Position" },
+      "description": "Organizational positions"
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "Private member registry and auth linkage"
+    },
+    "/publicMembers/{memberId}": {
+      "schema": { "$ref": "#/entities/PublicMember" },
+      "description": "Public organizational structure directory without PII"
+    },
+    "/memberAuthMap/{memberNumber}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "Private member number to Firebase Auth identity mapping"
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/Announcement" },
+      "description": "Organization announcements"
+    },
+    "/programs/{programId}": {
+      "schema": { "$ref": "#/entities/ProgramWork" },
+      "description": "Program Kerja entries and progress status"
+    },
+    "/attendance/{attendanceId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Private gate-duty selfie attendance records"
+    },
+    "/dutySchedules/{scheduleId}": {
+      "schema": { "$ref": "#/entities/DutySchedule" },
+      "description": "Attendance duty schedules and windows"
+    },
+    "/calendarEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/CalendarEvent" },
+      "description": "Monthly calendar events and deadlines"
+    },
+    "/galleryAlbums/{albumId}": {
+      "schema": { "$ref": "#/entities/GalleryAlbum" },
+      "description": "Gallery albums"
+    },
+    "/galleryItems/{itemId}": {
+      "schema": { "$ref": "#/entities/GalleryItem" },
+      "description": "Gallery photos and videos"
+    },
+    "/journeyTimeline/{timelineId}": {
+      "schema": { "$ref": "#/entities/JourneyItem" },
+      "description": "Chronological timeline of PADMAWIJAYA 2026/2027"
+    },
+    "/documents/{documentId}": {
+      "schema": { "$ref": "#/entities/ArchiveDocument" },
+      "description": "Document archive with public and private visibility"
+    },
+    "/musicTracks/{trackId}": {
+      "schema": { "$ref": "#/entities/MusicTrack" },
+      "description": "Authorized background music player tracks"
+    },
+    "/musicRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/MusicRequest" },
+      "description": "Public song requests and admin moderation queue"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable admin and attendance correction audit trail"
+    },
+    "/integrationJobs/{jobId}": {
+      "schema": { "$ref": "#/entities/IntegrationJob" },
+      "description": "Google Drive and Sheets integration execution logs"
+    }
+  }
+}
